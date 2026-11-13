@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manuscritos · Alighieria Publisher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="lateral">
+    <div class="marca">
+      <span class="marca-logo" aria-hidden="true">A</span>
+      <span><small>Alighieria</small><strong>Publisher</strong></span>
+    </div>
+    <nav>
+      <p class="grupo">Adquisiciones</p>
+      <a class="activo" href="#">Manuscritos</a>
+      <p class="grupo">General</p>
+      <span class="inactivo">Catálogo</span>
+      <span class="inactivo">Contactos</span>
+      <span class="inactivo">Planificación editorial</span>
+    </nav>
+    <p class="lateral-pie" id="aviso-ia"></p>
+  </aside>
+
+  <main>
+    <header class="cabecera">
+      <div>
+        <h1>Manuscritos</h1>
+        <p class="sub">Lo que ha llegado a la editorial y todavía no es un libro.</p>
+      </div>
+      <div class="cabecera-acciones">
+        <button class="boton" id="btn-ejemplos" type="button">Cargar ejemplos</button>
+        <button class="boton primario" id="btn-subir" type="button">Subir manuscritos</button>
+      </div>
+    </header>
+
+    <section class="tarjetas" id="tarjetas"></section>
+
+    <div class="cuerpo">
+      <aside class="filtros" id="filtros" aria-label="Filtros"></aside>
+      <section class="resultados">
+        <div class="barra">
+          <input id="buscar" type="search" placeholder="Buscar por título, autor, sumario o tag…" aria-label="Buscar">
+          <select id="orden" aria-label="Orden">
+            <option value="recientes">Más recientes</option>
+            <option value="titulo">Título (A–Z)</option>
+            <option value="palabras">Más extensos</option>
+          </select>
+        </div>
+        <div class="activos" id="activos"></div>
+        <div id="lista"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="velo" id="velo" hidden></div>
+  <aside class="ficha" id="ficha" hidden aria-label="Ficha del manuscrito"></aside>
+
+  <dialog id="dlg-subir">
+    <form method="dialog" class="dlg">
+      <h2>Subir manuscritos</h2>
+      <p class="sub">Cada archivo se lee entero y se prepara su ficha: sumario, temas y tags.</p>
+      <fieldset class="segmento">
+        <legend>¿Cómo ha llegado?</legend>
+        <label><input type="radio" name="origen" value="no_solicitado" checked><span>No solicitado</span></label>
+        <label><input type="radio" name="origen" value="solicitado"><span>Solicitado</span></label>
+      </fieldset>
+      <label class="zona" id="zona">
+        <input type="file" id="archivos" multiple accept=".docx,.pdf,.epub,.txt,.md">
+        <strong>Arrastra aquí los archivos</strong>
+        <span>o haz clic para elegirlos · .docx, .pdf, .epub, .txt, .md</span>
+      </label>
+      <p class="error" id="subir-error" hidden></p>
+      <div class="dlg-pie"><button class="boton" value="cancelar">Cerrar</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
