@@ -16,8 +16,17 @@ TEXTOS = DATOS / "textos"
 ORIGENES = ("solicitado", "no_solicitado")
 ESTADOS = ("recibido", "en_lectura", "preseleccionado", "descartado", "contratado")
 
-# Columnas que guardan listas (JSON en la base de datos).
+# Columnas que guardan listas u objetos (JSON en la base de datos).
 LISTAS = ("temas", "tags", "tono", "comparables")
+OBJETOS = ("metricas", "lectura")
+
+# Columnas añadidas después de la primera versión: se crean si faltan.
+_NUEVAS = {
+    "metricas": "TEXT NOT NULL DEFAULT 'null'",
+    "lectura": "TEXT NOT NULL DEFAULT 'null'",
+    "lectura_proceso": "TEXT NOT NULL DEFAULT ''",
+    "lectura_error": "TEXT NOT NULL DEFAULT ''",
+}
 
 _ESQUEMA = """
 CREATE TABLE IF NOT EXISTS manuscritos (
@@ -63,6 +72,14 @@ def iniciar() -> None:
     TEXTOS.mkdir(parents=True, exist_ok=True)
     with _conexion() as con:
         con.executescript(_ESQUEMA)
+        hay = {f["name"] for f in con.execute("PRAGMA table_info(manuscritos)")}
+        for columna, tipo in _NUEVAS.items():
+            if columna not in hay:
+                con.execute(f"ALTER TABLE manuscritos ADD COLUMN {columna} {tipo}")
+        con.execute(
+            "UPDATE manuscritos SET lectura_proceso='error', lectura_error='La lectura se "
+            "interrumpió; vuelve a pedirla.' WHERE lectura_proceso='leyendo'"
+        )
         # Un análisis que quedó a medias al parar el servidor ya no va a terminar.
         con.execute(
             "UPDATE manuscritos SET proceso='error', error='El análisis se interrumpió; "
@@ -74,6 +91,8 @@ def _fila(f: sqlite3.Row) -> dict:
     d = dict(f)
     for campo in LISTAS:
         d[campo] = json.loads(d[campo] or "[]")
+    for campo in OBJETOS:
+        d[campo] = json.loads(d[campo] or "null")
     return d
 
 
@@ -129,5 +148,6 @@ def vocabulario() -> dict[str, list[str]]:
 
 def _serializa(campos: dict) -> dict:
     return {
-        c: json.dumps(v, ensure_ascii=False) if c in LISTAS else v for c, v in campos.items()
+        c: json.dumps(v, ensure_ascii=False) if c in LISTAS + OBJETOS else v
+        for c, v in campos.items()
     }

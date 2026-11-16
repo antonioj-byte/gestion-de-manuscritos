@@ -33,11 +33,36 @@ primeras frases). Sirve para probar el flujo, no para clasificar de verdad; la f
 
 `MANUSCRITOS_MODELO` cambia el modelo (por defecto, `claude-opus-5-5`).
 
+## Métricas del texto
+
+Al subir un manuscrito se calculan, sin IA, medidas reproducibles del texto: legibilidad
+(Szigriszt-Pazos con escala INFLESZ en español, Flesch en inglés), largo medio de frase,
+proporción de diálogo, variedad léxica (MTLD) y variación del largo de frase. Si el texto
+tiene cabeceras de capítulo, se desglosan por capítulo y se marcan los tramos lentos. La
+ficha explica cómo se calcula cada una. Se puede subir un `.zip` con varios manuscritos.
+
+## Lectura asistida
+
+Con clave de Anthropic, el botón «Preparar informe de lectura» de la ficha hace que Claude
+lea el manuscrito por fragmentos de unas 3.000 palabras y devuelva una rúbrica de ocho
+criterios justificada con citas, fortalezas y debilidades, una propuesta (rechazar,
+reconsiderar, pedir más material, llevar a comité), un borrador de informe y una versión para
+el autor. Es la opinión de un modelo y no usa datos de ventas.
+
+## Pruebas
+
+```bash
+.venv/bin/python -m pytest tests
+.venv/bin/python -m scripts.consistencia manuscrito.docx   # con clave; gasta API
+```
+
 ## Qué hay
 
 - `app/main.py`: API y páginas estáticas.
 - `app/texto.py`: lectura de .docx, .pdf, .epub, .txt y .md.
 - `app/analisis.py`: ficha con Claude y extracción básica sin IA.
+- `app/metricas.py`: métricas deterministas del texto.
+- `app/lectura.py`: lectura por fragmentos, rúbrica e informe.
 - `app/db.py`: SQLite en `data/` (junto a los originales subidos; fuera de git).
 - `web/`: la interfaz (HTML, CSS y JavaScript sin compilar).
 - `ejemplos/ejemplos.json`: las fichas de ejemplo.

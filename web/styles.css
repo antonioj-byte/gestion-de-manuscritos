@@ -203,3 +203,50 @@ dialog::backdrop { background: rgba(24,24,27,.35); }
   .ficha { padding: 20px 18px 32px; }
   .controles { grid-template-columns: 1fr; }
 }
+
+/* Métricas y lectura asistida */
+.ficha h4 { font-size: 13px; font-weight: 600; margin: 20px 0 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ficha h4 span { font-weight: 400; color: var(--tenue); font-size: 12px; }
+.medidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+.medida { border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; }
+.medida .rotulo, .veredicto .rotulo { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--tenue); }
+.medida .valor { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.medida .nota { font-size: 12px; color: var(--tenue); }
+.medida details { margin-top: 6px; font-size: 12px; color: var(--tenue); }
+.medida summary, .tabla summary { cursor: pointer; text-decoration: underline; }
+.medida details p { margin-top: 6px; }
+.grafica { width: 100%; height: auto; display: block; }
+.grafica .eje { stroke: var(--borde-fuerte); stroke-width: 1; }
+.grafica .marca path { fill: #5b6472; }
+.grafica .marca.senal path, .grafica .marca circle { fill: var(--acento); }
+.grafica .marca:hover path { fill: var(--texto); }
+.punto { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--acento); margin-right: 2px; }
+.pista { position: fixed; z-index: 30; background: var(--texto); color: #fff; font-size: 12px; padding: 4px 9px; border-radius: 7px; pointer-events: none; max-width: 320px; }
+.tabla { margin-top: 10px; font-size: 12.5px; color: var(--tenue); }
+.tabla table { width: 100%; border-collapse: collapse; margin-top: 8px; color: var(--texto); }
+.tabla th, .tabla td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--borde); font-variant-numeric: tabular-nums; }
+.tabla th { font-weight: 500; color: var(--tenue); }
+.tabla th:first-child, .tabla td:first-child { text-align: left; }
+.ficha .estado-proceso { display: flex; align-items: center; gap: 8px; color: var(--tenue); }
+.veredicto { display: flex; gap: 32px; margin: 14px 0 8px; }
+.veredicto .valor { font: 400 24px var(--serif); }
+.veredicto small { font-size: 14px; color: var(--tenue); }
+.criterio { padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.criterio-cab { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.criterio p { color: #3f3f46; margin-top: 4px; }
+.criterio blockquote { margin: 6px 0 0; padding-left: 12px; border-left: 2px solid var(--borde-fuerte); font: italic 400 15px var(--serif); color: var(--tenue); }
+.regla { height: 4px; border-radius: 2px; background: var(--gris-suave); margin: 6px 0; }
+.regla i { display: block; height: 100%; border-radius: 2px; background: #5b6472; }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.dos ul { margin: 0; padding-left: 18px; }
+.texto-largo { white-space: pre-wrap; max-width: 68ch; }
+.pildora.nota { background: var(--texto); color: #fff; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .dos { grid-template-columns: 1fr; } }
+
+@media print {
+  body > *:not(.ficha) { display: none !important; }
+  .ficha { position: static; width: auto; box-shadow: none; border: 0; padding: 0; overflow: visible; }
+  .ficha .cerrar, .ficha-pie, .ficha .boton, .ficha .controles, .anadir, .chip .x, .ver-mas { display: none !important; }
+  details > *:not(summary) { display: block; }
+  .ficha section { break-inside: avoid-page; }
+}

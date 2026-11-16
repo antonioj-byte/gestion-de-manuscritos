@@ -82,31 +82,22 @@ def analizar(texto: str, archivo: str, vocabulario: dict[str, list[str]]) -> tup
     return _local(texto, archivo), "local"
 
 
-def _con_claude(texto: str, archivo: str, vocabulario: dict[str, list[str]]) -> dict:
+def pedir(sistema: str, usuario: str, esquema: type[BaseModel], max_tokens: int = 16000):
+    """Una petición a Claude con respuesta validada contra `esquema`.
+
+    Devuelve (objeto, uso) con uso = {"entrada": tokens, "salida": tokens}. Los fallos
+    salen como RuntimeError con un mensaje que se puede enseñar tal cual.
+    """
     import anthropic
 
-    cliente = anthropic.Anthropic()
-    existentes = (
-        f"Temas ya existentes en el catálogo: {', '.join(vocabulario['temas']) or '(ninguno)'}\n"
-        f"Tags ya existentes en el catálogo: {', '.join(vocabulario['tags']) or '(ninguno)'}"
-    )
     try:
-        respuesta = cliente.messages.parse(
+        respuesta = anthropic.Anthropic().messages.parse(
             model=MODELO,
-            max_tokens=16000,
+            max_tokens=max_tokens,
             thinking={"type": "adaptive"},
-            system=_SISTEMA,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Archivo: {archivo}\n{existentes}\n\n"
-                        f"<manuscrito>\n{texto}\n</manuscrito>\n\n"
-                        "Prepara la ficha de este manuscrito."
-                    ),
-                }
-            ],
-            output_format=Ficha,
+            system=sistema,
+            messages=[{"role": "user", "content": usuario}],
+            output_format=esquema,
         )
     except anthropic.AuthenticationError as e:
         raise RuntimeError("La clave de Anthropic no es válida.") from e
@@ -125,8 +116,22 @@ def _con_claude(texto: str, archivo: str, vocabulario: dict[str, list[str]]) -> 
         raise RuntimeError("El modelo ha declinado analizar este texto.")
     if respuesta.stop_reason == "max_tokens" or respuesta.parsed_output is None:
         raise RuntimeError("El análisis ha quedado incompleto; vuelve a intentarlo.")
+    uso = {"entrada": respuesta.usage.input_tokens, "salida": respuesta.usage.output_tokens}
+    return respuesta.parsed_output, uso
 
-    ficha = respuesta.parsed_output.model_dump()
+
+def _con_claude(texto: str, archivo: str, vocabulario: dict[str, list[str]]) -> dict:
+    existentes = (
+        f"Temas ya existentes en el catálogo: {', '.join(vocabulario['temas']) or '(ninguno)'}\n"
+        f"Tags ya existentes en el catálogo: {', '.join(vocabulario['tags']) or '(ninguno)'}"
+    )
+    objeto, _ = pedir(
+        _SISTEMA,
+        f"Archivo: {archivo}\n{existentes}\n\n<manuscrito>\n{texto}\n</manuscrito>\n\n"
+        "Prepara la ficha de este manuscrito.",
+        Ficha,
+    )
+    ficha = objeto.model_dump()
     for campo in ("temas", "tags", "tono"):
         ficha[campo] = normalizar(ficha[campo])
     return ficha

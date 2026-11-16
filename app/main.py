@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
 import re
+import zipfile
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
@@ -11,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analisis, db, texto
+from . import analisis, db, lectura, metricas, texto
 
 RAIZ = Path(__file__).resolve().parent.parent
 analisis.cargar_env(RAIZ / ".env")
@@ -59,6 +61,7 @@ def _procesar(mid: int) -> None:
             mid,
             **ficha,
             fuente=fuente,
+            metricas=metricas.calcular(contenido, ficha["idioma"]),
             palabras=texto.contar_palabras(contenido),
             extracto=texto.extracto(contenido),
             proceso="listo",
@@ -66,6 +69,36 @@ def _procesar(mid: int) -> None:
         )
     except Exception as e:  # el fallo se enseña en la ficha, no tumba el servidor
         db.actualizar(mid, proceso="error", error=str(e) or type(e).__name__)
+
+
+def _leer(mid: int) -> None:
+    """Lectura asistida (notas por fragmento, rúbrica, informe). Corre en segundo plano."""
+    m = db.obtener(mid)
+    if not m:
+        return
+    try:
+        contenido = (db.TEXTOS / f"{mid}.txt").read_text(encoding="utf-8")
+        db.actualizar(mid, lectura=lectura.leer(contenido, m), lectura_proceso="listo", lectura_error="")
+    except Exception as e:
+        db.actualizar(mid, lectura_proceso="error", lectura_error=str(e) or type(e).__name__)
+
+
+def _desempaquetar(nombre: str, datos: bytes) -> list[tuple[str, bytes]]:
+    """Un archivo subido, o los manuscritos que hay dentro si es un .zip."""
+    if not nombre.lower().endswith(".zip"):
+        return [(nombre, datos)]
+    try:
+        with zipfile.ZipFile(io.BytesIO(datos)) as z:
+            dentro = [
+                i for i in z.infolist()
+                if not i.is_dir()
+                and not Path(i.filename).name.startswith((".", "~"))
+                and "__MACOSX" not in i.filename
+                and Path(i.filename).suffix.lower() in texto.EXTENSIONES
+            ]
+            return [(Path(i.filename).name, z.read(i)) for i in dentro[:200]]
+    except zipfile.BadZipFile:
+        raise HTTPException(400, f"«{nombre}» no es un zip válido.")
 
 
 @app.get("/api/config")
@@ -77,6 +110,8 @@ def config() -> dict:
         "estados": db.ESTADOS,
         "origenes": db.ORIGENES,
         "extensiones": texto.EXTENSIONES,
+        "criterios": lectura.CRITERIOS,
+        "recomendaciones": lectura.RECOMENDACIONES,
     }
 
 
@@ -95,13 +130,16 @@ async def subir(
         raise HTTPException(400, "Origen no válido.")
     creados = []
     for archivo in archivos:
-        nombre = Path(archivo.filename or "manuscrito").name
-        provisional = re.sub(r"[_\-]+", " ", Path(nombre).stem).strip().capitalize()
-        mid = db.crear(titulo=provisional, archivo=nombre, origen=origen)
-        m = db.obtener(mid)
-        _ruta_original(m).write_bytes(await archivo.read())
-        tareas.add_task(_procesar, mid)
-        creados.append(m)
+        subido = Path(archivo.filename or "manuscrito").name
+        for nombre, datos in _desempaquetar(subido, await archivo.read()):
+            provisional = re.sub(r"[_\-]+", " ", Path(nombre).stem).strip().capitalize()
+            mid = db.crear(titulo=provisional, archivo=nombre, origen=origen)
+            m = db.obtener(mid)
+            _ruta_original(m).write_bytes(datos)
+            tareas.add_task(_procesar, mid)
+            creados.append(m)
+    if not creados:
+        raise HTTPException(400, "El zip no contiene manuscritos en un formato admitido.")
     return creados
 
 
@@ -138,6 +176,20 @@ def reanalizar(mid: int, tareas: BackgroundTasks) -> dict:
         raise HTTPException(400, "Este manuscrito es un ejemplo y no tiene archivo que analizar.")
     db.actualizar(mid, proceso="analizando", error="")
     tareas.add_task(_procesar, mid)
+    return db.obtener(mid)
+
+
+@app.post("/api/manuscritos/{mid}/lectura")
+def pedir_lectura(mid: int, tareas: BackgroundTasks) -> dict:
+    m = _o_404(mid)
+    if not analisis.hay_ia():
+        raise HTTPException(400, "La lectura asistida necesita la clave de Anthropic.")
+    if not (db.TEXTOS / f"{mid}.txt").exists():
+        raise HTTPException(400, "Este manuscrito no tiene texto que leer.")
+    if m["lectura_proceso"] == "leyendo":
+        return m
+    db.actualizar(mid, lectura_proceso="leyendo", lectura_error="")
+    tareas.add_task(_leer, mid)
     return db.obtener(mid)
 
 
