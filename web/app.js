@@ -291,51 +291,138 @@ function editables(m, campo) {
     <datalist id="lista-${campo}">${[...recuento(listos(), campo).keys()].filter((v) => !m[campo].includes(v)).sort().map((v) => `<option value="${esc(v)}">`).join("")}</datalist>`;
 }
 
+let textoAbierto = { id: null, texto: "" };
+let scrollLista = 0;
+
+const fecha = (iso) => new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+const esPdf = (m) => /\.pdf$/i.test(m.archivo);
+
+function campoTexto(m, campo, rotulo, ph = "") {
+  return `<label class="campo"><span>${rotulo}</span><input data-editar="${campo}" value="${esc(m[campo])}" placeholder="${esc(ph)}"></label>`;
+}
+function campoArea(m, campo, rotulo, ph, filas) {
+  return `<label class="campo ancho"><span>${rotulo}</span><textarea data-editar="${campo}" rows="${filas}" placeholder="${esc(ph)}">${esc(m[campo])}</textarea></label>`;
+}
+function campoLista(m, campo, rotulo, opciones) {
+  const pares = Array.isArray(opciones) ? opciones.map((o) => [o, o]) : Object.entries(opciones);
+  if (m[campo] && !pares.some(([v]) => v === m[campo])) pares.unshift([m[campo], m[campo]]);
+  if (!m[campo]) pares.unshift(["", "Sin indicar"]);
+  return `<label class="campo"><span>${rotulo}</span><select data-editar="${campo}">${pares
+    .map(([v, t]) => `<option value="${esc(v)}" ${m[campo] === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>`;
+}
+const bloque = (titulo, ayuda, cuerpo) =>
+  `<section class="bloque"><h3>${titulo}</h3>${ayuda ? `<p class="ayuda">${ayuda}</p>` : ""}${cuerpo}</section>`;
+
+// Esqueleto de la página: se monta una vez por manuscrito para no perder el scroll del
+// documento cada vez que se guarda un campo.
+function montarFicha(m) {
+  const conArchivo = m.fuente !== "ejemplo";
+  $("ficha").dataset.id = m.id;
+  $("ficha").innerHTML = `
+    <a class="volver" href="#/"><i data-lucide="arrow-left"></i>Volver al listado</a>
+    <div class="pagina-cab"><div><h1 class="titulo-ficha" id="ficha-titulo"></h1><p class="sub" id="ficha-sub"></p></div>
+      <button type="button" class="enlace-peligro" id="eliminar"><i data-lucide="trash-2"></i>Eliminar manuscrito</button></div>
+    <div class="ficha-rejilla">
+      <div class="panel doc-panel">
+        <div class="doc-acciones">
+          ${conArchivo ? `<a class="boton" href="/api/manuscritos/${m.id}/archivo"><i data-lucide="download"></i>Descargar original</a>` : ""}
+          <button type="button" class="boton" id="ampliar"><i data-lucide="maximize-2"></i>Ampliar</button>
+        </div>
+        <div class="doc-marco" id="doc-marco"><div class="hoja"><p class="ayuda">Cargando el texto…</p></div></div>
+        <p class="doc-pie" id="doc-pie"></p>
+      </div>
+      <div class="panel campos" id="campos"></div>
+    </div>`;
+  pintarDocumento(m);
+}
+
+async function pintarDocumento(m) {
+  const marco = $("doc-marco");
+  if (esPdf(m)) {
+    marco.innerHTML = `<iframe class="hoja-pdf" src="/api/manuscritos/${m.id}/archivo?ver=1" title="PDF original"></iframe>`;
+    $("doc-pie").textContent = `PDF original · ${m.archivo}`;
+    return;
+  }
+  if (m.fuente === "ejemplo") {
+    textoAbierto = { id: m.id, texto: m.extracto };
+    $("doc-pie").textContent = "Ficha de ejemplo: no hay archivo, solo el arranque del texto.";
+  } else if (textoAbierto.id !== m.id) {
+    const { texto } = await api(`/api/manuscritos/${m.id}/texto`);
+    textoAbierto = { id: m.id, texto };
+  }
+  if (abierto !== m.id) return;
+  const hoja = document.createElement("div");
+  hoja.className = "hoja";
+  if (m.titulo) {
+    const t = document.createElement("p");
+    t.className = "hoja-titulo";
+    t.textContent = m.titulo;
+    hoja.append(t);
+  }
+  const cuerpo = document.createElement("div");
+  cuerpo.className = "hoja-texto";
+  cuerpo.textContent = textoAbierto.texto || "No hay texto extraído de este archivo.";
+  hoja.append(cuerpo);
+  marco.replaceChildren(hoja);
+  if (m.fuente !== "ejemplo") {
+    $("doc-pie").textContent = `Texto extraído de ${m.archivo}${m.palabras ? ` · ${num(m.palabras)} palabras` : ""}. El formato original se ve al descargarlo.`;
+  }
+}
+
 function pintarFicha() {
   const m = manuscritos.find((x) => x.id === abierto);
   if (!m) return cerrarFicha();
-  const selector = (campo, mapa) =>
-    `<select data-editar="${campo}">${Object.entries(mapa).map(([v, t]) => `<option value="${v}" ${m[campo] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
-  const fuente = {
-    local: `<p class="aviso-fuente">Ficha hecha con la extracción básica, sin IA: los tags salen de las palabras más repetidas y no hay sumario de verdad. Configura la clave de Anthropic y pulsa «Volver a analizar».</p>`,
-    ejemplo: `<p class="aviso-fuente neutro">Ficha de ejemplo, inventada para enseñar la bandeja.</p>`,
-    ia: "",
-  }[m.fuente] ?? "";
-  const dato = (t, v) => (v && v.length ? `<dt>${t}</dt><dd>${esc(Array.isArray(v) ? v.join(", ") : v)}</dd>` : "");
-  const tieneArchivo = m.fuente !== "ejemplo";
+  if ($("ficha").dataset.id !== String(m.id)) montarFicha(m);
+
+  $("ficha-titulo").textContent = m.titulo || "Sin título";
+  $("ficha-sub").innerHTML = [
+    "Manuscrito",
+    m.autor ? esc(m.autor) : "",
+    `<span class="pildora ${m.origen === "solicitado" ? "solicitado" : "borde"}">${ORIGENES[m.origen]}</span>`,
+    `<span class="pildora ${m.estado}">${ESTADOS[m.estado]}</span>`,
+    `Recibido el ${fecha(m.creado)}`,
+  ].filter(Boolean).join(" · ");
 
   // No repintar encima de lo que se está escribiendo.
   const activo = document.activeElement;
-  if ($("ficha").contains(activo) && ["TEXTAREA", "INPUT"].includes(activo.tagName) && $("ficha").dataset.id === String(m.id)) return;
+  if ($("campos").contains(activo) && ["TEXTAREA", "INPUT"].includes(activo.tagName)) return;
 
-  $("ficha").dataset.id = m.id;
-  $("ficha").innerHTML = `
-    <div class="ficha-cab"><div><h2>${esc(m.titulo)}</h2><p class="autor">${esc(m.autor || "Autor sin identificar")} · ${metaLinea(m)}</p></div>
-      <button type="button" class="cerrar" id="cerrar-ficha" aria-label="Cerrar ficha">×</button></div>
-    ${m.proceso === "error" ? `<p class="aviso-fuente">No se pudo analizar: ${esc(m.error)}</p>` : fuente}
-    ${m.logline ? `<p class="logline">${esc(m.logline)}</p>` : ""}
-    <div class="controles">
-      <label class="campo">Estado ${selector("estado", ESTADOS)}</label>
-      <label class="campo">Origen ${selector("origen", ORIGENES)}</label>
-    </div>
-    ${m.sumario ? `<section><h3>${m.fuente === "local" ? "Primeras frases" : "Sumario"}</h3><p class="sumario">${esc(m.sumario)}</p></section>` : ""}
-    <section><h3>Temas</h3>${editables(m, "temas")}</section>
-    <section><h3>Tags</h3>${editables(m, "tags")}</section>
-    <section><h3>Ficha</h3><dl class="datos">
-      ${dato("Género", [m.genero, m.subgenero].filter(Boolean).join(" · "))}${dato("Público", m.publico)}${dato("Ambientación", m.ambientacion)}
-      ${dato("Tono", m.tono)}${dato("Comparables", m.comparables)}${dato("Idioma", m.idioma)}
-      ${dato("Extensión", m.palabras ? `${num(m.palabras)} palabras (unas ${num(Math.round(m.palabras / 300))} páginas)` : "")}
-      ${dato("Archivo", m.archivo)}${dato("Recibido", new Date(m.creado).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }))}
-    </dl></section>
+  const aviso = m.proceso === "error"
+    ? `<p class="aviso-fuente">No se pudo analizar: ${esc(m.error)}</p>`
+    : {
+        local: `<p class="aviso-fuente">Ficha hecha con la extracción básica, sin IA: los tags salen de las palabras más repetidas y no hay sumario de verdad. Con la clave de Anthropic, pulsa «Volver a analizar».</p>`,
+        ejemplo: `<p class="aviso-fuente neutro">Ficha de ejemplo, inventada para enseñar la bandeja.</p>`,
+      }[m.fuente] ?? "";
+  const dato = (t, v) => (v && v.length ? `<dt>${t}</dt><dd>${esc(Array.isArray(v) ? v.join(", ") : v)}</dd>` : "");
+  const extras = [
+    dato("Tono", m.tono), dato("Comparables", m.comparables),
+    dato("Extensión", m.palabras ? `${num(m.palabras)} palabras (unas ${num(Math.round(m.palabras / 300))} páginas)` : ""),
+    dato("Archivo", m.archivo),
+  ].join("");
+
+  $("campos").innerHTML = `
+    <p class="ayuda">Revisa los campos extraídos del manuscrito. Cada cambio se guarda al salir del campo.</p>
+    ${aviso}
+    ${bloque("Situación", "Dónde está el manuscrito dentro del proceso de lectura.", `<div class="rejilla-campos">
+      ${campoLista(m, "estado", "Estado", ESTADOS)}${campoLista(m, "origen", "Origen", ORIGENES)}</div>`)}
+    ${bloque("Ficha del manuscrito", "Datos sacados del texto. Corrígelos si algo no cuadra.", `<div class="rejilla-campos">
+      ${campoTexto(m, "titulo", "Título")}${campoTexto(m, "autor", "Autor", "Sin identificar")}
+      ${campoLista(m, "genero", "Género", config.generos || [])}${campoTexto(m, "subgenero", "Subgénero", "Novela familiar, thriller…")}
+      ${campoTexto(m, "publico", "Público", "Adulto, juvenil…")}${campoTexto(m, "idioma", "Idioma")}
+      <div class="ancho">${campoTexto(m, "ambientacion", "Ambientación", "Lugar y época")}</div>
+      ${campoArea(m, "logline", "Frase resumen", "De qué va, en una frase", 2)}
+      ${campoArea(m, "sumario", m.fuente === "local" ? "Primeras frases" : "Sumario", "Sumario del manuscrito", 7)}
+      </div>${extras ? `<dl class="datos">${extras}</dl>` : ""}`)}
+    ${bloque("Temas y tags", "Son los filtros de la bandeja. Al escribir se proponen los que ya existen; Intro para añadir.",
+      `<h4>Temas</h4>${editables(m, "temas")}<h4>Tags</h4>${editables(m, "tags")}`)}
     ${seccionMetricas(m)}
     ${seccionLectura(m)}
-    <section><h3>Notas del equipo</h3><label class="campo"><textarea data-editar="notas" placeholder="Impresiones de lectura, a quién se lo pasas, qué se contestó…" aria-label="Notas del equipo">${esc(m.notas)}</textarea></label></section>
-    ${m.extracto ? `<section><h3>Arranque del texto</h3><p class="extracto">${esc(m.extracto)}</p></section>` : ""}
+    ${bloque("Notas del equipo", "", `<label class="campo ancho"><textarea data-editar="notas" rows="4" placeholder="Impresiones de lectura, a quién se lo pasas, qué se contestó…" aria-label="Notas del equipo">${esc(m.notas)}</textarea></label>`)}
     <div class="ficha-pie">
-      ${tieneArchivo ? `<a class="boton" href="/api/manuscritos/${m.id}/archivo">Descargar original</a><button type="button" class="boton" id="reanalizar">Volver a analizar</button>` : ""}
-      <button type="button" class="boton" id="imprimir">Imprimir o guardar PDF</button>
-      <button type="button" class="boton peligro" id="eliminar">Eliminar</button>
+      ${m.fuente !== "ejemplo" ? `<button type="button" class="boton" id="reanalizar"><i data-lucide="refresh-cw"></i>Volver a analizar</button>` : ""}
+      <button type="button" class="boton" id="imprimir"><i data-lucide="printer"></i>Imprimir o guardar PDF</button>
     </div>`;
+  window.lucide?.createIcons();
 }
 
 // --- Métricas y lectura ------------------------------------------------------------------
@@ -459,18 +546,51 @@ document.addEventListener("mousemove", (e) => {
 });
 
 function abrirFicha(id) {
-  abierto = id;
-  $("ficha").hidden = false;
-  $("velo").hidden = false;
-  $("ficha").dataset.id = "";
-  pintarFicha();
-  $("ficha").scrollTop = 0;
+  scrollLista = window.scrollY;
+  location.hash = `#/manuscrito/${id}`;
 }
 
 function cerrarFicha() {
-  abierto = null;
-  $("ficha").hidden = true;
-  $("velo").hidden = true;
+  if (location.hash !== "#/" && location.hash !== "") location.hash = "#/";
+  else ruta();
+}
+
+// La ficha es una página propia (#/manuscrito/ID), como las fichas de Publisher.
+function ruta() {
+  const id = Number((location.hash.match(/^#\/manuscrito\/(\d+)/) || [])[1]);
+  const m = manuscritos.find((x) => x.id === id);
+  if ($("dlg-doc").open) $("dlg-doc").close();
+  if (m) {
+    const nueva = abierto !== id;
+    abierto = id;
+    $("vista-lista").hidden = true;
+    $("vista-ficha").hidden = false;
+    pintarFicha();
+    if (nueva) window.scrollTo(0, 0);
+  } else {
+    const venia = abierto !== null;
+    abierto = null;
+    $("ficha").dataset.id = "";
+    $("vista-ficha").hidden = true;
+    $("vista-lista").hidden = false;
+    if (venia) window.scrollTo(0, scrollLista);
+  }
+}
+
+function ampliarDocumento() {
+  const m = manuscritos.find((x) => x.id === abierto);
+  if (!m) return;
+  $("dlg-doc-titulo").textContent = m.titulo;
+  const cuerpo = $("dlg-doc-cuerpo");
+  if (esPdf(m)) {
+    cuerpo.innerHTML = `<iframe class="hoja-pdf" src="/api/manuscritos/${m.id}/archivo?ver=1" title="PDF original"></iframe>`;
+  } else {
+    const hoja = document.createElement("div");
+    hoja.className = "hoja hoja-grande";
+    hoja.textContent = textoAbierto.id === m.id ? textoAbierto.texto : m.extracto;
+    cuerpo.replaceChildren(hoja);
+  }
+  $("dlg-doc").showModal();
 }
 
 async function guardar(id, cambios) {
@@ -513,8 +633,11 @@ $("btn-subir").onclick = () => $("dlg-subir").showModal();
 $("btn-ejemplos").onclick = cargarEjemplos;
 $("buscar").oninput = (e) => { filtro.q = e.target.value.trim(); pintarFiltros(); pintarActivos(); pintarLista(); };
 $("orden").onchange = (e) => { filtro.orden = e.target.value; pintarLista(); };
-$("velo").onclick = cerrarFicha;
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && abierto !== null && !$("dlg-subir").open) cerrarFicha(); });
+document.addEventListener("keydown", (e) => {
+  const dialogo = $("dlg-subir").open || $("dlg-doc").open;
+  if (e.key === "Escape" && abierto !== null && !dialogo && !e.target.closest?.("input, textarea, select")) cerrarFicha();
+});
+window.addEventListener("hashchange", ruta);
 
 $("tarjetas").onclick = (e) => {
   const t = e.target.closest("[data-atajo]");
@@ -563,29 +686,30 @@ $("lista").onclick = (e) => {
 $("ficha").onclick = async (e) => {
   const m = manuscritos.find((x) => x.id === abierto);
   if (!m) return;
-  if (e.target.id === "cerrar-ficha") return cerrarFicha();
+  const quien = e.target.closest("[id]")?.id;
+  if (quien === "ampliar") return ampliarDocumento();
   const borrar = e.target.closest("[data-borrar]");
   if (borrar) {
     const campo = borrar.dataset.borrar;
     return guardar(m.id, { [campo]: m[campo].filter((v) => v !== borrar.dataset.valor) });
   }
-  if (e.target.id === "imprimir") return window.print();
-  if (e.target.id === "pedir-lectura") {
-    e.target.disabled = true;
+  if (quien === "imprimir") return window.print();
+  if (quien === "pedir-lectura") {
+    $("pedir-lectura").disabled = true;
     try { await api(`/api/manuscritos/${m.id}/lectura`, { method: "POST" }); } catch (err) { alert(err.message); }
     return cargar();
   }
-  if (e.target.id === "copiar-autor") {
+  if (quien === "copiar-autor") {
     await navigator.clipboard.writeText(m.lectura.para_el_autor);
-    e.target.textContent = "Copiado";
+    $("copiar-autor").textContent = "Copiado";
     return;
   }
-  if (e.target.id === "reanalizar") {
+  if (quien === "reanalizar") {
     await api(`/api/manuscritos/${m.id}/analizar`, { method: "POST" });
     cerrarFicha();
     return cargar();
   }
-  if (e.target.id === "eliminar") {
+  if (quien === "eliminar") {
     if (!confirm(`¿Eliminar «${m.titulo}» y su archivo? No se puede deshacer.`)) return;
     await api(`/api/manuscritos/${m.id}`, { method: "DELETE" });
     cerrarFicha();
@@ -620,5 +744,7 @@ zona.addEventListener("drop", (e) => subir([...e.dataTransfer.files]));
     ? `Análisis con IA activo (${config.modelo}).`
     : "Sin clave de Anthropic: las subidas se analizan con una extracción básica, sin IA.";
   aviso.classList.toggle("aviso", !config.ia);
+  window.lucide?.createIcons();
   await cargar();
+  ruta();
 })();

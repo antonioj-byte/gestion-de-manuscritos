@@ -146,8 +146,6 @@ button.chip:hover { border-color: var(--borde-fuerte); }
 .vacio .boton { margin: 16px 4px 0; }
 
 /* Ficha */
-.velo { position: fixed; inset: 0; background: rgba(24,24,27,.28); z-index: 10; }
-.ficha { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); background: var(--panel); border-left: 1px solid var(--borde); z-index: 11; overflow: auto; padding: 26px 30px 40px; box-shadow: -12px 0 40px rgba(0,0,0,.08); }
 .ficha-cab { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .ficha h2 { font: 400 30px/1.15 var(--serif); }
 .ficha .autor { color: var(--tenue); margin-top: 4px; }
@@ -243,10 +241,103 @@ dialog::backdrop { background: rgba(24,24,27,.35); }
 .pildora.nota { background: var(--texto); color: #fff; font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) { .dos { grid-template-columns: 1fr; } }
 
+/* --- Estilo de Publisher: barra lateral, barra superior y fichas de página completa --- */
+.lateral { width: 236px; padding: 18px 12px; overflow-y: auto; }
+.marca { padding: 2px 6px 20px; margin-bottom: 8px; gap: 12px; }
+.marca-logo { width: 46px; height: 46px; flex: none; }
+.marca strong { font-size: 22px; letter-spacing: -.015em; }
+nav a, nav span { display: flex; align-items: center; gap: 11px; padding: 8px 12px; border-radius: 10px; color: #3f3f46; text-decoration: none; font-size: 14px; }
+nav span { color: #52525b; cursor: default; }
+nav a.activo { color: var(--texto); background: var(--panel); border: 1px solid var(--borde); box-shadow: 0 1px 2px rgba(0,0,0,.05); position: relative; font-weight: 500; }
+nav a.activo::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--acento); }
+nav a.activo svg { color: var(--acento); }
+nav svg { width: 17px; height: 17px; stroke-width: 1.6; flex: none; color: #71717a; }
+.grupo { padding: 18px 12px 6px; }
+
+main { padding-top: 14px; }
+.barra-sup { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-bottom: 26px; color: #3f3f46; }
+.idiomas { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--gris-suave); border: 1px solid var(--borde); }
+.idiomas button { border: 0; background: none; padding: 4px 9px; border-radius: 7px; font-size: 12.5px; font-weight: 500; color: var(--tenue); cursor: default; }
+.idiomas button.on { background: var(--panel); color: var(--texto); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.barra-sup .separa { width: 1px; height: 22px; background: var(--borde); }
+.cuenta { display: inline-flex; align-items: center; gap: 8px; }
+.cuenta svg { width: 18px; height: 18px; stroke-width: 1.6; }
+.boton { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.boton svg { width: 15px; height: 15px; stroke-width: 1.8; }
+
+.volver { display: inline-flex; align-items: center; gap: 7px; color: var(--tenue); text-decoration: none; font-size: 13.5px; }
+.volver:hover { color: var(--texto); }
+.volver svg { width: 15px; height: 15px; }
+.pagina-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin: 10px 0 24px; }
+.titulo-ficha { font: 400 30px/1.15 var(--serif); text-transform: uppercase; letter-spacing: .005em; }
+.pagina-cab .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13.5px; }
+.enlace-peligro { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: #3f3f46; cursor: pointer; padding: 6px 4px; font-size: 13.5px; white-space: nowrap; }
+.enlace-peligro:hover { color: var(--acento); }
+.enlace-peligro svg { width: 15px; height: 15px; }
+
+.ficha { position: static; width: auto; padding: 0; box-shadow: none; border: 0; overflow: visible; background: none; }
+.ficha-rejilla { display: grid; grid-template-columns: minmax(0, .66fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--borde); border-radius: 16px; padding: 20px 22px; }
+.doc-panel { position: sticky; top: 16px; padding: 14px; }
+.doc-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+.doc-marco { background: var(--gris-suave); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; height: calc(100vh - 210px); min-height: 420px; overflow: auto; }
+.hoja { background: #fff; border: 1px solid var(--borde); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.05); padding: 44px 40px; font: 400 13px/1.65 "Newsreader", Georgia, serif; color: #27272a; min-height: 100%; }
+.hoja-titulo { text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 18px; font-size: 13.5px; }
+.hoja-texto, .hoja-grande { white-space: pre-wrap; overflow-wrap: anywhere; }
+.hoja-pdf { width: 100%; height: 100%; border: 0; border-radius: 8px; background: #fff; }
+.doc-pie { font-size: 12px; color: var(--tenue); margin-top: 10px; padding: 0 4px; }
+
+.campos > .ayuda:first-child { margin-bottom: 4px; }
+.campos .bloque { margin-top: 22px; padding-top: 4px; }
+.campos .bloque + .bloque, .campos section + section { border-top: 1px solid var(--borde); padding-top: 22px; }
+.ficha h3 { font-size: 11px; font-weight: 500; letter-spacing: .16em; color: #52525b; margin-bottom: 4px; }
+.ficha .bloque > .ayuda, .ficha section > .ayuda { margin-bottom: 14px; line-height: 1.55; }
+.rejilla-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.rejilla-campos .ancho, .campo.ancho { grid-column: 1 / -1; }
+.ficha .campo { gap: 7px; font-size: 14px; color: var(--texto); }
+.ficha .campo > span { font-size: 14px; }
+.ficha .campo input, .ficha .campo select, .ficha .campo textarea {
+  background: #f7f7f8; border: 1px solid var(--borde); border-radius: 10px; padding: 11px 13px; font-size: 14px; min-height: 44px;
+}
+.ficha .campo textarea { line-height: 1.55; resize: vertical; }
+.ficha .campo input:focus, .ficha .campo select:focus, .ficha .campo textarea:focus { background: #fff; border-color: var(--borde-fuerte); outline: 2px solid var(--acento-suave); }
+.ficha .campo select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2371717a' stroke-width='1.8' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+.ficha .datos { margin-top: 16px; font-size: 13px; }
+.ficha h4:first-of-type { margin-top: 4px; }
+.ficha-pie { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--borde); }
+
+.dlg-doc { width: min(920px, calc(100vw - 32px)); height: calc(100vh - 48px); max-height: none; }
+.dlg-doc[open] { display: flex; flex-direction: column; }
+.dlg-doc-barra { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--borde); }
+#dlg-doc-cuerpo { flex: 1; overflow: auto; background: var(--gris-suave); padding: 24px; }
+.hoja-grande { font-size: 15px; padding: 56px 64px; max-width: 760px; margin: 0 auto; }
+
+@media (max-width: 1100px) {
+  .ficha-rejilla { grid-template-columns: 1fr; }
+  .doc-panel { position: static; }
+  .doc-marco { height: 420px; }
+}
+@media (max-width: 760px) {
+  .barra-sup { display: none; }
+  .pagina-cab { flex-direction: column; }
+  .rejilla-campos { grid-template-columns: 1fr; }
+  .panel { padding: 16px; }
+  .hoja { padding: 26px 20px; }
+  .hoja-grande { padding: 28px 20px; }
+}
+
 @media print {
-  body > *:not(.ficha) { display: none !important; }
-  .ficha { position: static; width: auto; box-shadow: none; border: 0; padding: 0; overflow: visible; }
-  .ficha .cerrar, .ficha-pie, .ficha .boton, .ficha .controles, .anadir, .chip .x, .ver-mas { display: none !important; }
+  .lateral, .barra-sup, .volver, .enlace-peligro, .doc-panel, .ficha-pie, .boton, .anadir, .chip .x, .ver-mas, #vista-lista { display: none !important; }
+  body { display: block; background: #fff; }
+  main { padding: 0; }
+  .ficha-rejilla { display: block; }
+  .panel { border: 0; padding: 0; }
+  .ficha .campo input, .ficha .campo select, .ficha .campo textarea { background: none; border: 0; padding: 0; min-height: 0; }
   details > *:not(summary) { display: block; }
   .ficha section { break-inside: avoid-page; }
 }
+
+/* Ajustes */
+a.boton { color: var(--texto); }
+.lateral { width: 248px; }
+nav a, nav span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

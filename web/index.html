@@ -12,29 +12,52 @@
 <body>
   <aside class="lateral">
     <div class="marca">
-      <span class="marca-logo" aria-hidden="true">A</span>
+      <svg class="marca-logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#e11d48"/><path d="M22.5 12h6.2l-9 24h-6.2z" fill="#fff"/><path d="M27.6 25.5l3.9 10.5h-6.1l-1.6-4.6z" fill="#fff"/></svg>
       <span><small>Alighieria</small><strong>Publisher</strong></span>
     </div>
     <nav>
-      <p class="grupo">Adquisiciones</p>
-      <a class="activo" href="#">Manuscritos</a>
+      <span><i data-lucide="layout-grid"></i>Dashboard</span>
       <p class="grupo">General</p>
-      <span class="inactivo">Catálogo</span>
-      <span class="inactivo">Contactos</span>
-      <span class="inactivo">Planificación editorial</span>
+      <span><i data-lucide="book-open"></i>Catálogo</span>
+      <span><i data-lucide="building-2"></i>Contactos</span>
+      <span><i data-lucide="stamp"></i>Sellos editoriales</span>
+      <span><i data-lucide="calendar-days"></i>Planificación editorial</span>
+      <span><i data-lucide="landmark"></i>Finanzas</span>
+      <p class="grupo">Pre-publicación</p>
+      <a class="activo" href="#/"><i data-lucide="inbox"></i>Manuscritos</a>
+      <span><i data-lucide="file-pen-line"></i>Generación de contratos</span>
+      <span><i data-lucide="calculator"></i>Escandallos</span>
+      <p class="grupo">Operaciones</p>
+      <span><i data-lucide="file-signature"></i>Contratos editoriales</span>
+      <span><i data-lucide="truck"></i>Albaranes</span>
+      <span><i data-lucide="file-bar-chart"></i>Informes de venta</span>
+      <span><i data-lucide="receipt"></i>Liquidaciones al autor</span>
+      <span><i data-lucide="file-text"></i>Facturas</span>
+      <p class="grupo">Análisis y seguimiento</p>
+      <span><i data-lucide="boxes"></i>Stock</span>
+      <span><i data-lucide="bar-chart-3"></i>Datos y estadísticas</span>
     </nav>
     <p class="lateral-pie" id="aviso-ia"></p>
   </aside>
 
   <main>
+    <div class="barra-sup">
+      <div class="idiomas" role="group" aria-label="Idioma" title="En esta versión, solo en español">
+        <button type="button" class="on">ES</button><button type="button" disabled>EN</button><button type="button" disabled>FR</button>
+      </div>
+      <span class="separa"></span>
+      <span class="cuenta"><i data-lucide="circle-user-round"></i>Mi cuenta</span>
+    </div>
+    <div id="vista-ficha" hidden><div id="ficha" class="ficha"></div></div>
+    <div id="vista-lista">
     <header class="cabecera">
       <div>
         <h1>Manuscritos</h1>
         <p class="sub">Lo que ha llegado a la editorial y todavía no es un libro.</p>
       </div>
       <div class="cabecera-acciones">
-        <button class="boton" id="btn-ejemplos" type="button">Cargar ejemplos</button>
-        <button class="boton primario" id="btn-subir" type="button">Subir manuscritos</button>
+        <button class="boton" id="btn-ejemplos" type="button"><i data-lucide="sparkles"></i>Cargar ejemplos</button>
+        <button class="boton primario" id="btn-subir" type="button"><i data-lucide="upload"></i>Subir manuscritos</button>
       </div>
     </header>
 
@@ -58,10 +81,13 @@
         <div id="lista"></div>
       </section>
     </div>
+    </div>
   </main>
 
-  <div class="velo" id="velo" hidden></div>
-  <aside class="ficha" id="ficha" hidden aria-label="Ficha del manuscrito"></aside>
+  <dialog id="dlg-doc" class="dlg-doc">
+    <div class="dlg-doc-barra"><strong id="dlg-doc-titulo"></strong><form method="dialog"><button class="boton">Cerrar</button></form></div>
+    <div id="dlg-doc-cuerpo"></div>
+  </dialog>
 
   <dialog id="dlg-subir">
     <form method="dialog" class="dlg">
@@ -82,6 +108,7 @@
     </form>
   </dialog>
 
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

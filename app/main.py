@@ -28,6 +28,12 @@ class Cambios(BaseModel):
     origen: str | None = None
     estado: str | None = None
     genero: str | None = None
+    subgenero: str | None = None
+    publico: str | None = None
+    ambientacion: str | None = None
+    idioma: str | None = None
+    logline: str | None = None
+    sumario: str | None = None
     notas: str | None = None
     temas: list[str] | None = None
     tags: list[str] | None = None
@@ -165,6 +171,10 @@ def editar(mid: int, cambios: Cambios) -> dict:
     for campo in ("temas", "tags"):
         if campo in datos:
             datos[campo] = analisis.normalizar(datos[campo])
+    # La legibilidad depende del idioma: si se corrige, se recalculan las métricas.
+    ruta_texto = db.TEXTOS / f"{mid}.txt"
+    if "idioma" in datos and ruta_texto.exists():
+        datos["metricas"] = metricas.calcular(ruta_texto.read_text(encoding="utf-8"), datos["idioma"])
     db.actualizar(mid, **datos)
     return db.obtener(mid)
 
@@ -194,12 +204,23 @@ def pedir_lectura(mid: int, tareas: BackgroundTasks) -> dict:
 
 
 @app.get("/api/manuscritos/{mid}/archivo")
-def descargar(mid: int) -> FileResponse:
+def descargar(mid: int, ver: bool = False) -> FileResponse:
+    """El archivo original; con ?ver=1 se abre en el navegador en vez de descargarse."""
     m = _o_404(mid)
     ruta = _ruta_original(m)
     if not ruta.exists():
         raise HTTPException(404, "No hay archivo original.")
-    return FileResponse(ruta, filename=m["archivo"])
+    return FileResponse(
+        ruta, filename=m["archivo"], content_disposition_type="inline" if ver else "attachment"
+    )
+
+
+@app.get("/api/manuscritos/{mid}/texto")
+def ver_texto(mid: int) -> dict:
+    """El texto extraído del manuscrito, para enseñarlo junto a la ficha."""
+    _o_404(mid)
+    ruta = db.TEXTOS / f"{mid}.txt"
+    return {"texto": ruta.read_text(encoding="utf-8") if ruta.exists() else ""}
 
 
 @app.delete("/api/manuscritos/{mid}")
